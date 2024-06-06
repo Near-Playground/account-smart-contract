@@ -1,10 +1,25 @@
 {
     "name": "account-smart-contract",
     "version": "1.0.0",
-    "description": "",
+    "type": "module",
     "scripts": {
         "contract:build": "cd rust-contract && cargo near build --no-release --no-abi --out-dir '../contract/'",
-        "contract:test": "cd rust-contract && cargo test"
+        "contract:test": "cd rust-contract && cargo test",
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "preact": "^10.13.1",
+        "preact-iso": "^2.6.3",
+        "preact-render-to-string": "^6.5.4"
+    },
+    "devDependencies": {
+        "@preact/preset-vite": "^2.5.0",
+        "vite": "^4.3.2"
+    },
+    "eslintConfig": {
+        "extends": "preact"
     },
     "author": "",
     "license": "ISC"
