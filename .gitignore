@@ -1,1 +1,2 @@
-/target
+rust-contract/target
+rust-server/contract
