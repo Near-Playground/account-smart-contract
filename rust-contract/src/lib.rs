@@ -1,33 +1,116 @@
 // Find all our documentation at https://docs.near.org
-use near_sdk::{log, near};
+use near_sdk::{env, near, NearToken, Promise, PublicKey};
+use serde::Serialize;
+use serde_json::Value;
 
 // Define the contract structure
 #[near(contract_state)]
 pub struct Contract {
-    greeting: String,
+    beneficiary_public_key: Option<PublicKey>,
+    beneficiary_created_date: Option<u64>,
+    beneficiary_updated_date: Option<u64>,
+    beneficiary_effective_date: Option<u64>,
 }
+
+
 
 // Define the default, which automatically initializes the contract
 impl Default for Contract {
     fn default() -> Self {
         Self {
-            greeting: "Hello".to_string(),
+            beneficiary_public_key: None,
+            beneficiary_created_date: None,
+            beneficiary_updated_date: None,
+            beneficiary_effective_date: None,
         }
     }
+}
+
+#[derive(Serialize)]
+struct Will {
+    beneficiary_public_key: Option<PublicKey>,
+    beneficiary_created_date: Option<u64>,
+    beneficiary_updated_date: Option<u64>,
+    beneficiary_effective_date: Option<u64>,
+}
+
+#[derive(Serialize)]
+struct Version {
+    name: String,
+    version: u16,
 }
 
 // Implement the contract structure
 #[near]
 impl Contract {
-    // Public method - returns the greeting saved, defaulting to DEFAULT_GREETING
-    pub fn get_greeting(&self) -> String {
-        self.greeting.clone()
+    #[payable]
+    pub fn create_will(&mut self, beneficiary_public_key: PublicKey, beneficiary_effective_date: u64) {
+        assert!(self.beneficiary_public_key.is_none(), "Will has already been created, delete the old will if you want to create a new will");
+        assert!(env::attached_deposit() >= NearToken::from_yoctonear(1), "Attached deposit must be at least 1 yoctoNEAR");
+        assert!(env::predecessor_account_id() == env::current_account_id(), "Only account owner can create will");
+
+        self.beneficiary_public_key = Some(beneficiary_public_key.clone());
+        self.beneficiary_created_date = Some(env::block_timestamp());
+        self.beneficiary_updated_date = Some(env::block_timestamp());
+        self.beneficiary_effective_date = Some(beneficiary_effective_date);
     }
 
-    // Public method - accepts a greeting, such as "howdy", and records it
-    pub fn set_greeting(&mut self, greeting: String) {
-        log!("Saving greeting: {greeting}");
-        self.greeting = greeting;
+    #[payable]
+    pub fn delete_will(&mut self) {
+        assert!(env::attached_deposit() >= NearToken::from_yoctonear(1), "Attached deposit must be at least 1 yoctoNEAR");
+        assert!(env::predecessor_account_id() == env::current_account_id(), "Only account owner can delete will");
+
+        self.beneficiary_public_key = None;
+        self.beneficiary_created_date = None;
+        self.beneficiary_updated_date = None;
+        self.beneficiary_effective_date = None;
+    }
+
+    #[payable]
+    pub fn extend_will(&mut self, beneficiary_effective_date: u64) {
+        assert!(env::attached_deposit() >= NearToken::from_yoctonear(1), "Attached deposit must be at least 1 yoctoNEAR");
+        assert!(self.beneficiary_effective_date.is_some(), "Beneficiary effective date has not been set");
+        assert!(self.beneficiary_effective_date.unwrap() < beneficiary_effective_date, "Beneficiary effective date must be later than the current effective date.\nIf you want to shorten the will time, delete the old will and create a new one.");
+        assert!(env::predecessor_account_id() == env::current_account_id(), "Only account owner can extend will");
+
+        self.beneficiary_updated_date = Some(env::block_timestamp());
+        self.beneficiary_effective_date = Some(beneficiary_effective_date);
+    }
+
+    pub fn execute_will(&mut self) -> Promise {
+        assert!(self.beneficiary_public_key.is_some(), "Will has not been created");
+        assert!(self.beneficiary_effective_date.is_some(), "Beneficiary effective date has not been set");
+        assert!(env::block_timestamp() >= self.beneficiary_effective_date.unwrap(), "Beneficiary effective date has not been reached");
+
+        let beneficiary_public_key = self.beneficiary_public_key.clone();
+
+        self.beneficiary_public_key = None;
+        self.beneficiary_created_date = None;
+        self.beneficiary_updated_date = None;
+        self.beneficiary_effective_date = None;
+
+        // What if this promise failed? The beneficiary public key already deleted
+        Promise::new(env::current_account_id()).add_full_access_key(beneficiary_public_key.unwrap())
+    }
+
+    pub fn get_will(&self) -> Value {
+        let will = Will {
+            beneficiary_public_key: self.beneficiary_public_key.clone(),
+            beneficiary_created_date: self.beneficiary_created_date,
+            beneficiary_updated_date: self.beneficiary_updated_date,
+            beneficiary_effective_date: self.beneficiary_effective_date,
+        };
+
+        serde_json::to_value(&will).unwrap()
+    }
+
+    pub fn get_version(&self) -> Value {
+        let version = Version {
+            name: env!("CARGO_PKG_NAME").to_string(),
+            version: 1,
+        };
+
+        serde_json::to_value(&version).unwrap()
     }
 }
 
@@ -40,16 +123,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_default_greeting() {
+    pub fn default_will_is_empty() {
         let contract = Contract::default();
-        // this test did not call set_greeting so should return the default "Hello" greeting
-        assert_eq!(contract.get_greeting(), "Hello");
-    }
 
-    #[test]
-    fn set_then_get_greeting() {
-        let mut contract = Contract::default();
-        contract.set_greeting("howdy".to_string());
-        assert_eq!(contract.get_greeting(), "howdy");
+        assert_eq!(contract.beneficiary_public_key, None);
+        assert_eq!(contract.beneficiary_created_date, None);
     }
 }
