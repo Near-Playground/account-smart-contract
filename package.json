@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "",
     "scripts": {
-        "contract:build": "cd rust-contract && cargo near build --no-release --no-abi --out-dir '../rust-server/contract/'",
+        "contract:build": "cd rust-contract && cargo near build --no-release --no-abi --out-dir '../contract/'",
         "contract:test": "cd rust-contract && cargo test"
     },
     "author": "",
