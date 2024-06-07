@@ -1,4 +1,12 @@
 import { useLocation } from 'preact-iso';
+import {
+    accounts,
+    activeAccount,
+    wallet,
+    walletSelectorModal,
+} from '../signals/wallet';
+import { darkMode } from '../signals/darkMode';
+import { contractVersion, deployContract } from '../signals/contract';
 
 export function Header() {
     const { url } = useLocation();
@@ -17,60 +25,109 @@ export function Header() {
                 <div class='flex items-center md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse'>
                     <button
                         type='button'
-                        class='flex text-sm bg-gray-800 md:me-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600'
+                        class='flex text-sm bg-white text-gray-800 dark:text-white dark:bg-gray-800 md:me-0 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600'
                         id='user-menu-button'
                         aria-expanded='false'
                         data-dropdown-toggle='user-dropdown'
                         data-dropdown-placement='bottom'
                     >
                         <span class='sr-only'>Open user menu</span>
-                        Login
+                        {activeAccount.value?.accountId ?? 'Guest'}
                     </button>
                     <div
                         class='z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded-lg shadow dark:bg-gray-700 dark:divide-gray-600'
                         id='user-dropdown'
                     >
-                        <div class='px-4 py-3'>
-                            <span class='block text-sm text-gray-900 dark:text-white'>
-                                Bonnie Green
-                            </span>
-                            <span class='block text-sm  text-gray-500 truncate dark:text-gray-400'>
-                                name@flowbite.com
-                            </span>
-                        </div>
+                        {activeAccount.value && (
+                            <div class='px-4 py-3'>
+                                <span class='block text-sm text-gray-900 dark:text-white'>
+                                    {activeAccount.value?.accountId}
+                                </span>
+                                <div class='flex flex-row'>
+                                    <img
+                                        class='block my-1 h-3 w-3 rounded-full mr-1'
+                                        src={wallet.value?.metadata.iconUrl}
+                                    />
+                                    <span class='block text-sm  text-gray-500 truncate dark:text-gray-400'>
+                                        {wallet.value?.metadata.name}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                         <ul class='py-2' aria-labelledby='user-menu-button'>
+                            {darkMode.value ? (
+                                <li>
+                                    <a
+                                        href='#'
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            darkMode.value = false;
+                                        }}
+                                        class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
+                                    >
+                                        Switch to Light Mode
+                                    </a>
+                                </li>
+                            ) : (
+                                <li>
+                                    <a
+                                        href='#'
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            darkMode.value = true;
+                                        }}
+                                        class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
+                                    >
+                                        Switch to Dark Mode
+                                    </a>
+                                </li>
+                            )}
+                            {activeAccount.value &&
+                                contractVersion.value === null && (
+                                    <li>
+                                        <a
+                                            href='/contract/deploy'
+                                            class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
+                                        >
+                                            Deploy Contract
+                                        </a>
+                                    </li>
+                                )}
                             <li>
                                 <a
-                                    href='#'
-                                    class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
-                                >
-                                    Dashboard
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href='#'
+                                    href='/settings'
                                     class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
                                 >
                                     Settings
                                 </a>
                             </li>
-                            <li>
-                                <a
-                                    href='#'
-                                    class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
-                                >
-                                    Earnings
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href='#'
-                                    class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
-                                >
-                                    Sign out
-                                </a>
-                            </li>
+                            {activeAccount.value ? (
+                                <li>
+                                    <a
+                                        href='#'
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            wallet.value?.signOut();
+                                        }}
+                                        class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
+                                    >
+                                        Sign out
+                                    </a>
+                                </li>
+                            ) : (
+                                <li>
+                                    <a
+                                        href='#'
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            walletSelectorModal.show();
+                                        }}
+                                        class='block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white'
+                                    >
+                                        Sign in
+                                    </a>
+                                </li>
+                            )}
                         </ul>
                     </div>
                     <button
@@ -109,7 +166,7 @@ export function Header() {
                                 class='block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500'
                                 aria-current='page'
                             >
-                                Home
+                                Menu 1
                             </a>
                         </li>
                         <li>
@@ -117,7 +174,7 @@ export function Header() {
                                 href='#'
                                 class='block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
                             >
-                                About
+                                Menu 2
                             </a>
                         </li>
                         <li>
@@ -125,7 +182,7 @@ export function Header() {
                                 href='#'
                                 class='block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
                             >
-                                Services
+                                Menu 3
                             </a>
                         </li>
                         <li>
@@ -133,7 +190,7 @@ export function Header() {
                                 href='#'
                                 class='block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
                             >
-                                Pricing
+                                Menu 4
                             </a>
                         </li>
                         <li>
@@ -141,7 +198,7 @@ export function Header() {
                                 href='#'
                                 class='block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 dark:text-white md:dark:hover:text-blue-500 dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
                             >
-                                Contact
+                                Menu 5
                             </a>
                         </li>
                     </ul>
