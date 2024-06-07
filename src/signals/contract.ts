@@ -7,9 +7,15 @@ import bs58 from 'bs58';
 import nacl from 'tweetnacl';
 import { z } from 'zod';
 
-const zContractVersion = z.object({
-    name: z.string(),
-    version: z.number(),
+const zContractSourceMetadata = z.object({
+    version: z.string(),
+    link: z.union([z.string(), z.null()]),
+    standards: z.array(
+        z.object({
+            standard: z.string(),
+            version: z.string(),
+        })
+    ),
 });
 
 type ContractVersionData = {
@@ -45,21 +51,31 @@ export const refreshContractVersion = async (): Promise<void> => {
 
     const contractId = activeAccount.value.accountId;
 
-    const getVersionResponse = zContractVersion.parse(
-        await account.viewFunction({
+    const getMetadataResponse = await account
+        .viewFunction({
             contractId,
-            methodName: 'get_version',
+            methodName: 'contract_source_metadata',
         })
-    );
+        .then((res) => zContractSourceMetadata.parse(res))
+        .catch((err) => {
+            console.log(err);
+            return null;
+        });
 
-    if (getVersionResponse.name !== 'near-playground-account') {
+    console.log(getMetadataResponse);
+
+    if (
+        !getMetadataResponse ||
+        getMetadataResponse.link !==
+            'https://github.com/Near-Playground/account-smart-contract/tree/main/rust-contract'
+    ) {
         contractVersion.value = null;
         return;
     }
 
     contractVersion.value = {
-        version: getVersionResponse.version,
-        humanReadableVersion: '',
+        version: 1,
+        humanReadableVersion: getMetadataResponse.version,
     };
 };
 

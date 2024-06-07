@@ -23,7 +23,7 @@ export function DeployContract() {
         return <LoginRequired />;
     }
 
-    if (contractVersion.value?.version) {
+    if (contractVersion.value) {
         return (
             <div class='container mx-auto px-4'>
                 <h1 class='text-xl mt-8 mb-5'>
