@@ -6,6 +6,7 @@ import { derivePath } from 'near-hd-key';
 import bs58 from 'bs58';
 import nacl from 'tweetnacl';
 import { z } from 'zod';
+import { patchNotes } from '../data/patch-note';
 
 const zContractSourceMetadata = z.object({
     version: z.string(),
@@ -74,7 +75,12 @@ export const refreshContractVersion = async (): Promise<void> => {
     }
 
     contractVersion.value = {
-        version: 1,
+        version:
+            patchNotes.find(
+                (patchNote) =>
+                    patchNote.humanReadableVersion ===
+                    getMetadataResponse.version
+            )?.version ?? -1,
         humanReadableVersion: getMetadataResponse.version,
     };
 };
