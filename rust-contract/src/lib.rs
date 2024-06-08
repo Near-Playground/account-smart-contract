@@ -34,20 +34,14 @@ struct Will {
     beneficiary_effective_date: Option<u64>,
 }
 
-#[derive(Serialize)]
-struct Version {
-    name: String,
-    version: u16,
-}
-
 // Implement the contract structure
 #[near]
 impl Contract {
+    #[private]
     #[payable]
     pub fn create_will(&mut self, beneficiary_public_key: PublicKey, beneficiary_effective_date: u64) {
         assert!(self.beneficiary_public_key.is_none(), "Will has already been created, delete the old will if you want to create a new will");
         assert!(env::attached_deposit() >= NearToken::from_yoctonear(1), "Attached deposit must be at least 1 yoctoNEAR");
-        assert!(env::predecessor_account_id() == env::current_account_id(), "Only account owner can create will");
 
         self.beneficiary_public_key = Some(beneficiary_public_key.clone());
         self.beneficiary_created_date = Some(env::block_timestamp());
@@ -55,10 +49,10 @@ impl Contract {
         self.beneficiary_effective_date = Some(beneficiary_effective_date);
     }
 
+    #[private]
     #[payable]
     pub fn delete_will(&mut self) {
         assert!(env::attached_deposit() >= NearToken::from_yoctonear(1), "Attached deposit must be at least 1 yoctoNEAR");
-        assert!(env::predecessor_account_id() == env::current_account_id(), "Only account owner can delete will");
 
         self.beneficiary_public_key = None;
         self.beneficiary_created_date = None;
@@ -66,12 +60,12 @@ impl Contract {
         self.beneficiary_effective_date = None;
     }
 
+    #[private]
     #[payable]
     pub fn extend_will(&mut self, beneficiary_effective_date: u64) {
         assert!(env::attached_deposit() >= NearToken::from_yoctonear(1), "Attached deposit must be at least 1 yoctoNEAR");
         assert!(self.beneficiary_effective_date.is_some(), "Beneficiary effective date has not been set");
         assert!(self.beneficiary_effective_date.unwrap() < beneficiary_effective_date, "Beneficiary effective date must be later than the current effective date.\nIf you want to shorten the will time, delete the old will and create a new one.");
-        assert!(env::predecessor_account_id() == env::current_account_id(), "Only account owner can extend will");
 
         self.beneficiary_updated_date = Some(env::block_timestamp());
         self.beneficiary_effective_date = Some(beneficiary_effective_date);
@@ -102,15 +96,6 @@ impl Contract {
         };
 
         serde_json::to_value(&will).unwrap()
-    }
-
-    pub fn get_version(&self) -> Value {
-        let version = Version {
-            name: env!("CARGO_PKG_NAME").to_string(),
-            version: 1,
-        };
-
-        serde_json::to_value(&version).unwrap()
     }
 }
 
